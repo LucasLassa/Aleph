@@ -113,11 +113,13 @@ marco activo.
 | `↑` / `↓` | Subir / bajar opacidad (pasos de 0.05) |
 | `Shift + M` | Alternar modo marco (edición ↔ pasivo) |
 | `Shift + D` | Borrar las reglas propias |
-| `Shift + S` | Captura de pantalla con las líneas |
+| `Shift + S` / `PrtScn` | Captura de pantalla con las líneas |
 | `Shift + C` | Alternar color de las líneas (blanco / negro) |
-| `Esc` | Cerrar la aplicación |
+| `F1` | Abrir / cerrar el manual |
 | `Tab` | Abrir / cerrar el panel |
-| `Shift + clic izq.` | Colocar / mover una regla propia |
+| `Clic izq.` | Con una regla armada, colocarla en el lienzo |
+| `Shift + clic izq.` | Varias reglas seguidas / mover una existente |
+| `Esc` | En cascada: cierra el manual → desarma la regla → cierra el panel → sale del modo película → cierra Aleph |
 
 Las teclas se configuran en `src/core/keymap.py`.
 
@@ -129,16 +131,17 @@ organizado en secciones:
 - **Reglas**: guía anterior/posterior, opacidad y color de las líneas.
 - **Dibujo**: botones para crear reglas propias (rectas, diagonales
   y vértices).
-- **Listo para ver**: modo visualización (pasivo) y borrar las líneas
+- **Modo película**: ocultar la botonera y borrar las líneas
   propias.
 - **Opciones**: captura de pantalla, carpeta de guardado y manual de uso.
 - **Apoya nuestra app**: link de donación, CVU y alias (para copiar y pegar).
 
 ### Modo pasivo
 
-Con `Shift + M` (o el botón "Modo visualización") la overlay quita todo el
-cromo y deja solo las guías. Abajo a la derecha aparece un botón "Volver
-al modo edición".
+Con `Shift + M` (o el botón "Ocultar botonera") la overlay quita todo el
+cromo y deja solo las guías; aparece un cartel "Shift+M para volver".
+Abajo a la derecha queda un botón "Volver al modo edición". El manual
+(`F1`) se abre desde cualquier modo.
 
 Los atajos con Shift siguen funcionando con el marco OFF. El teclado
 también responde sin botones visibles: `←` `→`, `↑` `↓`, `Shift + M`,
@@ -153,10 +156,12 @@ esquinas) y el punto de fuga.
 
 ### Cómo se colocan
 
-1. Pulsá el botón del tipo de regla que quieras.
-2. Mantené `Shift` y arrastrá con clic izquierdo hasta donde quieras el
-   vértice.
-3. Al soltar `Shift`, la regla queda fija.
+1. Pulsá el botón del tipo de regla que quieras: el botón queda armado
+   (iluminado) y el cursor se vuelve cruz.
+2. Hacé click en el lienzo donde querés el vértice: la regla se coloca
+   y el botón se desarma.
+3. Mantené `Shift` al colocar para dibujar varias seguidas; con un
+   arrastre movés la regla que acabás de colocar.
 
 ### Cómo se borran
 
@@ -170,17 +175,19 @@ el lienzo limpio. Es útil para usar solo tus reglas.
 
 ## CAPTURAS DE PANTALLA
 
-`Shift + S` (o el botón "Capturar") guarda una foto con la guía activa y
-las reglas superpuestas.
+`Shift + S`, `PrtScn` (o el botón "Capturar") guarda una foto con la guía
+activa y las reglas superpuestas, casi sin demora.
 
 - Se guarda en Descargas, o en la carpeta elegida con "Guardar en".
-- Nombres: `aleph-AAAAMMDD-HHMMSS.png`.
-- 
+- Nombres: `aleph_regla_de_tercios_2026-10-24_15-30-12_001.png`
+  (guía, fecha-hora y contador).
+
 ## CONFIGURACIÓN
 
 La configuración se guarda en
 `~/.config/aleph/config.json` al cerrar la app: opacidad,
-color de líneas y carpeta de capturas.
+color de líneas, carpeta de capturas y si ya se vio el manual
+(`seen_manual`).
 
 ## DESARROLLO
 

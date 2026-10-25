@@ -14,23 +14,24 @@ from PySide6.QtGui import (
     QPaintEvent,
     QPen,
 )
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QApplication, QWidget
 
 from src.ui.icons import resource_path
 
 TITLE = "—MANUAL DE USO—"
 COLUMNS = ("Funcion", "Comando")
 ROWS: list[tuple[str, str]] = [
-    ("Abrir y Cerrar panel de opciones", "TAB - Tabulador"),
-    ("Seleccionar regla siguiente", "Flecha derecha"),
-    ("Seleccionar regla anterior", "Flecha izquierda"),
-    ("Aumentar el grado de transparencia de la regla", "Flecha arriba"),
-    ("Disminuir el grado de transparencia de la regla", "Flecha abajo"),
+    ("Abrir / cerrar panel de opciones", "TAB"),
+    ("Abrir / cerrar este manual", "F1"),
+    ("Regla siguiente / anterior", "→ / ←"),
+    ("Subir / bajar opacidad", "↑ / ↓"),
+    ("Dibujar regla horizontal", "Click botón + click lienzo"),
+    ("Dibujar varias reglas seguidas", "Mantén Shift al colocar"),
     ("Borrar mis reglas dibujadas", "Shift + D"),
-    ("Sacar captura de pantalla", "Shift + S"),
-    ("Cambiar el color de la regla", "Shift + C"),
-    ("Alternar a modo visualizacion", "Shift + M"),
-    ("Cerrar Aleph", "ESC - Escape"),
+    ("Sacar captura de pantalla", "Shift + S / PrtScn"),
+    ("Cambiar color de la regla", "Shift + C"),
+    ("Modo película (ocultar botonera)", "Shift + M"),
+    ("Cerrar Aleph (o panel si está abierto)", "ESC"),
 ]
 
 BG = QColor(45, 45, 48)
@@ -94,13 +95,16 @@ def _ui_font(px: int) -> QFont:
 
 class ManualDialog(QWidget):
 
-    def __init__(self) -> None:
+    def __init__(self, overlay: QWidget | None = None) -> None:
         super().__init__()
+        self._overlay = overlay
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        # No roba foco: el overlay conserva el teclado y los keybinds siguen vivos.
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self.setWindowModality(Qt.WindowModality.NonModal)
         self.setWindowTitle(TITLE)
         font = _ui_font(BODY_FONT_PX)
         metrics = QFontMetrics(font)
@@ -211,6 +215,11 @@ class ManualDialog(QWidget):
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == Qt.Key.Key_Escape:
             self.close()
+            return
+        # Reenvía cualquier otra tecla al overlay: los keybinds siguen vivos
+        # aunque el foco del teclado haya caído en el manual.
+        if self._overlay is not None:
+            QApplication.sendEvent(self._overlay, event)
             return
         super().keyPressEvent(event)
 

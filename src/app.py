@@ -29,7 +29,17 @@ class App(QApplication):
         self.platform = get_platform(window=None)
         self.window = OverlayWindow(self.state, self.platform)
         self.window.showFullScreen()
-        QTimer.singleShot(0, self.window.show_manual)
+        if not self.state.seen_manual:
+            QTimer.singleShot(0, self.window.show_manual)
+            self.state.seen_manual = True
+            manager.save(self.state.to_dict())
+        else:
+            QTimer.singleShot(
+                800,
+                lambda: self.window._show_label(
+                    "Tab abre el panel · F1 abre el manual", 3500
+                ),
+            )
         self.aboutToQuit.connect(self._save)
         self._install_sigusr1()
         desktop.install_desktop_shortcut()

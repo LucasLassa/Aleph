@@ -9,7 +9,19 @@ def test_keymap_actions_exist():
 def test_documented_keys_are_wired():
     assert set(keymap.KEYMAP) >= {
         "Left", "Right", "Up", "Down", "Shift+M", "Esc", "Tab", "Shift+D",
+        "F1", "Print", "Shift+S",
     }
+
+def test_f1_toggles_the_manual():
+    s = State()
+    assert keymap.KEYMAP["F1"] == "manual"
+    assert keymap.handle("F1", s) == "manual"
+
+def test_printscreen_captures_like_shift_s():
+    s = State()
+    assert keymap.KEYMAP["Print"] == "capture"
+    assert keymap.handle("Print", s) == "capture"
+    assert s.pending_capture is True
 
 def test_tab_toggles_panel_action():
     assert keymap.KEYMAP["Tab"] == "toggle_panel"

@@ -18,6 +18,7 @@ from PySide6.QtCore import (
     QUrl,
 )
 from PySide6.QtGui import (
+    QCloseEvent,
     QColor,
     QCursor,
     QDesktopServices,
@@ -32,7 +33,7 @@ from PySide6.QtGui import (
     QPaintEvent,
     QPen,
 )
-from PySide6.QtWidgets import QApplication, QFileDialog, QWidget
+from PySide6.QtWidgets import QApplication, QFileDialog, QToolTip, QWidget
 
 from src.core import capture as capture_core
 from src.core import guides, keymap, rules
@@ -44,8 +45,7 @@ from src.ui.icons import resource_path
 from src.ui.manual import ManualDialog
 
 LABEL_DURATION_MS = 1500
-CAPTURE_NOTICE_MS = 1025
-CAPTURE_DELAY_MS = 2000
+CAPTURE_DELAY_MS = 50
 PANEL_WIDTH = 340
 PANEL_CONTENT_W = 320
 PANEL_BUTTONS_W = 300
@@ -106,15 +106,15 @@ PANEL_ROWS: list[tuple[str | None, list[tuple[str, str]]]] = [
     (
         None,
         [
-            ("rule_rect_si", "┘ Superior izquierdo"),
-            ("rule_rect_sd", "└ Superior derecho"),
+            ("rule_rect_si", "Rectángulo ↖"),
+            ("rule_rect_sd", "Rectángulo ↗"),
         ],
     ),
     (
         None,
         [
-            ("rule_rect_ii", "┐ Inferior izquierdo"),
-            ("rule_rect_id", "┌ Inferior derecho"),
+            ("rule_rect_ii", "Rectángulo ↙"),
+            ("rule_rect_id", "Rectángulo ↘"),
         ],
     ),
     (
@@ -123,7 +123,7 @@ PANEL_ROWS: list[tuple[str | None, list[tuple[str, str]]]] = [
     ),
     (
         None,
-        [("toggle_frame", "Modo visualización")],
+        [("toggle_frame", "Ocultar botonera")],
     ),
     (
         None,
@@ -146,7 +146,7 @@ PANEL_ROWS: list[tuple[str | None, list[tuple[str, str]]]] = [
 PANEL_SECTIONS: list[tuple[str | None, list[tuple[str | None, list[tuple[str, str]]]]]] = [
     ("REGLAS", PANEL_ROWS[0:3]),
     ("DIBUJO", PANEL_ROWS[3:8]),
-    ("LISTO PARA VER", PANEL_ROWS[8:10]),
+    ("MODO PELÍCULA", PANEL_ROWS[8:10]),
     ("OPCIONES", PANEL_ROWS[10:12]),
     ("♥ Apoya nuestra app", PANEL_ROWS[12:13]),
 ]
@@ -161,6 +161,40 @@ RULE_KINDS: dict[str, tuple[str, int]] = {
     "rule_rect_ii": ("rect", 2),
     "rule_rect_id": ("rect", 3),
     "rule_fuga": ("fuga", -1),
+}
+
+TOOLTIPS: dict[str, str] = {
+    "guide_prev": "Regla anterior (←)",
+    "guide_next": "Regla siguiente (→)",
+    "opacity_slider": "Arrastrar para regular la transparencia",
+    "line_white": "Línea blanca",
+    "line_black": "Línea negra",
+    "rule_h": "Horizontal · click y luego click en el lienzo",
+    "rule_v": "Vertical · click y luego click en el lienzo",
+    "rule_asc": "Diagonal ascendente",
+    "rule_desc": "Diagonal descendente",
+    "rule_rect_si": "Rectángulo hasta la esquina superior izquierda",
+    "rule_rect_sd": "Rectángulo hasta la esquina superior derecha",
+    "rule_rect_ii": "Rectángulo hasta la esquina inferior izquierda",
+    "rule_rect_id": "Rectángulo hasta la esquina inferior derecha",
+    "rule_fuga": "Punto de fuga con rayos a los bordes",
+    "capture": "Capturar pantalla (Shift+S / PrtScn)",
+    "capture_dir": "Elegir carpeta de capturas",
+    "toggle_frame": "Ocultar la botonera (Shift+M)",
+    "clear_rules": "Borrar todas mis reglas (Shift+D)",
+    "manual": "Abrir el manual (F1)",
+    "donate_link": "Abrir la página de donación",
+    "donate_cvu": "Copiar el CVU al portapapeles",
+    "donate_alias": "Copiar el alias al portapapeles",
+}
+
+BUTTON_SHORTCUTS: dict[str, str] = {
+    "guide_prev": "←",
+    "guide_next": "→",
+    "capture": "Shift+S",
+    "toggle_frame": "Shift+M",
+    "clear_rules": "Shift+D",
+    "manual": "F1",
 }
 
 PANEL_LABEL_FONT_SIZE = 16
@@ -249,13 +283,29 @@ class OverlayWindow(QWidget):
         self._hint_timer.start()
         self._dragging_opacity = False
         self._manual: ManualDialog | None = None
+        self.setMouseTracking(True)
+        self._pressed_button: str | None = None
+        self._tooltip_btn: str | None = None
+        self._tooltip_timer = QTimer(self)
+        self._tooltip_timer.setSingleShot(True)
+        self._tooltip_timer.setInterval(600)
+        self._tooltip_timer.timeout.connect(self._show_button_tooltip)
+        self._tooltip_pos = QPoint()
 
     def show_manual(self) -> None:
         if self._manual is None:
-            self._manual = ManualDialog()
+            self._manual = ManualDialog(self)
         self._manual.show()
         self._manual.raise_()
-        self._manual.activateWindow()
+        # Sin activateWindow() en el manual: el overlay conserva el foco
+        # y los keybinds (Tab, Shift+M, F1...) siguen respondiendo.
+        self.activateWindow()
+        self.setFocus()
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        if self._manual is not None:
+            self._manual.close()
+        super().closeEvent(event)
 
     def _on_panel_anim_finished(self) -> None:
         self._panel_offset = float(PANEL_WIDTH) if self._panel_open else 0.0
@@ -499,9 +549,29 @@ class OverlayWindow(QWidget):
             painter.setPen(text_color)
             painter.drawText(QRectF(rect), Qt.AlignmentFlag.AlignCenter, text)
             return
+        shortcut = BUTTON_SHORTCUTS.get(name)
+        if shortcut is None:
+            painter.setPen(PANEL_GLYPH_COLOR)
+            painter.setFont(self._panel_button_font(text, rect.width()))
+            painter.drawText(QRectF(rect), Qt.AlignmentFlag.AlignCenter, text)
+            return
+        # Texto principal + " (atajo)" en amarillo, todo centrado.
+        full = f"{text} ({shortcut})"
+        font = self._panel_button_font(full, rect.width())
+        painter.setFont(font)
+        fm = QFontMetrics(font, self)
+        main_w = fm.horizontalAdvance(text)
+        sep_w = fm.horizontalAdvance(" (")
+        sc_w = fm.horizontalAdvance(shortcut)
+        total = main_w + sep_w + sc_w + fm.horizontalAdvance(")")
+        x0 = rect.x() + (rect.width() - total) // 2
+        y0 = rect.y() + (rect.height() + fm.ascent() - fm.descent()) // 2
         painter.setPen(PANEL_GLYPH_COLOR)
-        painter.setFont(self._panel_button_font(text, rect.width()))
-        painter.drawText(QRectF(rect), Qt.AlignmentFlag.AlignCenter, text)
+        painter.drawText(x0, y0, text)
+        painter.setPen(PANEL_SECTION_TITLE_COLOR)
+        painter.drawText(x0 + main_w, y0, " (")
+        painter.drawText(x0 + main_w + sep_w, y0, shortcut)
+        painter.drawText(x0 + main_w + sep_w + sc_w, y0, ")")
 
     def _draw_section_titles(
         self, painter: QPainter, x_ini: int
@@ -554,6 +624,21 @@ class OverlayWindow(QWidget):
         handle_x = track.x() + track.width() * self.state.opacity
         painter.setBrush(PANEL_GLYPH_COLOR)
         painter.drawEllipse(QPointF(handle_x, track.center().y()), 6, 6)
+        if self._dragging_opacity:
+            big = self._panel_label_font(PANEL_BUTTON_FONT_MAX)
+            painter.setFont(big)
+            painter.setPen(QColor(0, 0, 0, 220))
+            for dx, dy in (
+                (-2, 0), (2, 0), (0, -2), (0, 2),
+                (-2, -2), (2, -2), (-2, 2), (2, 2),
+            ):
+                painter.drawText(
+                    QRectF(rect.x() + dx, rect.y() + dy, rect.width(), rect.height()),
+                    Qt.AlignmentFlag.AlignCenter,
+                    text,
+                )
+            painter.setPen(PANEL_HEAD_COLOR)
+            painter.drawText(QRectF(rect), Qt.AlignmentFlag.AlignCenter, text)
         painter.restore()
 
     def _panel_button_font(self, text: str, width: int) -> QFont:
@@ -609,6 +694,11 @@ class OverlayWindow(QWidget):
         painter.restore()
 
     def _is_button_active(self, name: str) -> bool:
+        if name == self._pressed_button:
+            return True
+        if name in RULE_KINDS:
+            kind, corner = RULE_KINDS[name]
+            return self._armed_rule == (kind, corner)
         if name == "line_white":
             return not self.state.line_dark
         if name == "line_black":
@@ -657,24 +747,28 @@ class OverlayWindow(QWidget):
         if self._capture_timer.isActive():
             return
         self._chrome_hidden = True
+        # Borra cualquier aviso previo: si no, queda dentro de la foto.
+        self._hide_label()
         self._hide_cursor(True)
-        self._show_label("Capturando…")
         self.update()
+        QApplication.processEvents()
         self._capture_timer.start(CAPTURE_DELAY_MS)
 
     def _do_capture(self) -> None:
         grabber = capture_platform.make_grabber(self.platform.get_screen_geometry())
-        self.hide()
-        image, path = capture_with_guides(grabber, self.state)
-        self.show()
-        if self.state.fullscreen:
-            self.showFullScreen()
-        self._chrome_hidden = False
-        self._hide_cursor(False)
+        try:
+            self.hide()
+            image, path = capture_with_guides(grabber, self.state)
+        finally:
+            self.show()
+            if self.state.fullscreen:
+                self.showFullScreen()
+            self._chrome_hidden = False
+            self._hide_cursor(False)
         if path is None:
-            self._show_label("No se pudo capturar", CAPTURE_NOTICE_MS)
+            self._show_label("No se pudo capturar · ¿carpeta accesible? ¿grim instalado?", 3000)
         else:
-            self._show_label(f"Captura guardada: {path.name}", CAPTURE_NOTICE_MS)
+            self._show_label(f"Guardado en {path}", 2500)
         self.update()
 
     def _hide_cursor(self, hidden: bool) -> None:
@@ -721,6 +815,8 @@ class OverlayWindow(QWidget):
             self.show()
         if was_fullscreen and not self.isFullScreen():
             self.showFullScreen()
+        if not self.state.frame_mode:
+            self._show_label("Shift+M para volver", 2000)
         self.update()
 
     def _panel_button_at(self, pos: QPoint) -> str | None:
@@ -732,11 +828,22 @@ class OverlayWindow(QWidget):
     def _panel_tab_at(self, pos: QPoint) -> bool:
         return self._panel_tab_rect().contains(pos)
 
+    def _flash_and_execute(self, btn: str) -> None:
+        self._pressed_button = None
+        self.update()
+        self._run_button_action(btn)
+
+    def _show_button_tooltip(self) -> None:
+        if self._tooltip_btn is not None and self._tooltip_btn in TOOLTIPS:
+            QToolTip.showText(self._tooltip_pos, TOOLTIPS[self._tooltip_btn], self)
+
     def _run_button_action(self, name: str) -> None:
         if name in RULE_KINDS:
             kind, corner = RULE_KINDS[name]
             self._armed_rule = (kind, corner)
-            self._show_label("Regla: mantén Shift y arrastra")
+            self.setCursor(QCursor(Qt.CursorShape.CrossCursor))
+            self._show_label("Click en el lienzo · Shift para varias seguidas", 2500)
+            self.update()
         elif name in ("guide_prev", "guide_next"):
             keymap.ACTIONS[name](self.state)
             self._show_label(guides.POOL[self.state.guide_index])
@@ -855,29 +962,14 @@ class OverlayWindow(QWidget):
         self._resize_origin = None
 
     def leaveEvent(self, event: QEvent) -> None:
+        self._tooltip_btn = None
+        self._tooltip_timer.stop()
+        QToolTip.hideText()
         self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
         super().leaveEvent(event)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         pos = event.position().toPoint()
-        shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
-        if event.button() == Qt.MouseButton.LeftButton and shift:
-            btn = self._panel_button_at(pos)
-            if btn in RULE_KINDS:
-                kind, corner = RULE_KINDS[btn]
-                self._start_rule_placement(kind, corner)
-            else:
-                diagonal = self._diagonal_at(pos)
-                if diagonal is not None:
-                    self._placing = (diagonal.kind, diagonal.corner)
-                    self._placing_rule = diagonal
-                elif self._armed_rule is not None:
-                    kind, corner = self._armed_rule
-                    self._start_rule_placement(kind, corner)
-                else:
-                    return
-            self._update_rule_placement(pos)
-            return
         if event.button() != Qt.MouseButton.LeftButton:
             super().mousePressEvent(event)
             return
@@ -897,12 +989,36 @@ class OverlayWindow(QWidget):
             self._update_opacity_from_pos(pos)
             return
         if btn is not None:
-            self._run_button_action(btn)
+            # Flash de 80 ms antes de ejecutar: el clic se siente aunque
+            # la acción (manual, captura...) tarde en aparecer.
+            self._pressed_button = btn
+            self.update()
+            QTimer.singleShot(80, lambda b=btn: self._flash_and_execute(b))
             return
         handle = self._handle_at(pos)
         if handle is not None:
             self._start_resize(handle)
             return
+        # Regla armada: un click en el lienzo la coloca (sin Shift).
+        shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+        if self._armed_rule is not None:
+            kind, corner = self._armed_rule
+            self._start_rule_placement(kind, corner)
+            self._update_rule_placement(pos)
+            if not shift:
+                # Sin Shift se desarma: solo una regla por gesto.
+                self._armed_rule = None
+                self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+            self.update()
+            return
+        # Shift + click sobre una diagonal existente: retomarla para mover.
+        if shift:
+            diagonal = self._diagonal_at(pos)
+            if diagonal is not None:
+                self._placing = (diagonal.kind, diagonal.corner)
+                self._placing_rule = diagonal
+                self._update_rule_placement(pos)
+                return
         super().mousePressEvent(event)
 
     def _update_opacity_from_pos(self, pos: QPoint) -> None:
@@ -933,7 +1049,17 @@ class OverlayWindow(QWidget):
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         pos = event.position().toPoint()
         shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
-        if shift and self._placing is not None:
+        btn = self._panel_button_at(pos)
+        if btn != self._tooltip_btn:
+            self._tooltip_btn = btn
+            self._tooltip_timer.stop()
+            QToolTip.hideText()
+            if btn is not None and btn in TOOLTIPS:
+                self._tooltip_pos = self.mapToGlobal(pos)
+                self._tooltip_timer.start()
+        if self._placing is not None and (
+            shift or event.buttons() & Qt.MouseButton.LeftButton
+        ):
             self._update_rule_placement(pos)
             return
         if self._dragging_opacity:
@@ -960,6 +1086,11 @@ class OverlayWindow(QWidget):
             self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if self._placing is not None:
+            # Terminó el gesto de colocación; el botón sigue armado si
+            # se usó Shift (varias seguidas).
+            self._finish_rule_placement()
+            return
         if self._resizing is not None:
             self._end_resize()
             return
@@ -975,7 +1106,27 @@ class OverlayWindow(QWidget):
         shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
         action = keymap.handle(key, self.state, shift=shift)
         if action == "quit":
-            self.close()
+            # Esc en cascada: manual → desarmar regla → panel → modo
+            # película → cerrar Aleph.
+            if self._manual is not None and self._manual.isVisible():
+                self._manual.close()
+            elif self._armed_rule is not None or self._placing is not None:
+                self._armed_rule = None
+                self._finish_rule_placement()
+                self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+                self.update()
+            elif self._panel_open:
+                self.toggle_panel()
+            elif not self.state.frame_mode:
+                self._set_frame_mode(True)
+            else:
+                self.close()
+            return
+        if action == "manual":
+            if self._manual is not None and self._manual.isVisible():
+                self._manual.close()
+            else:
+                self.show_manual()
             return
         if action is not None:
             if action == "toggle_frame":

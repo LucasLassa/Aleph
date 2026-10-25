@@ -4,4 +4,5 @@ DEFAULTS: dict = {
     "monitor": "",
     "line_dark": False,
     "capture_dir": "",
+    "seen_manual": False,
 }

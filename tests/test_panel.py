@@ -6,6 +6,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pytest
 from PySide6.QtCore import QEvent, QPoint, QPointF, Qt
 from PySide6.QtGui import QColor, QFontMetrics, QMouseEvent
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
 from src.core.state import State
@@ -44,6 +45,8 @@ def _click(window: OverlayWindow, x: float, y: float) -> None:
         Qt.KeyboardModifier.NoModifier,
     )
     window.mousePressEvent(event)
+    # Los botones del panel ejecutan su acción tras el flash de 80 ms.
+    QTest.qWait(110)
 
 def test_panel_is_closed_by_default(app: QApplication):
     window = _window(State())
@@ -64,6 +67,8 @@ def test_click_on_tab_opens_and_closes_panel(app: QApplication):
     assert window._panel_open is True
     assert window._panel_anim.endValue() == ow.PANEL_WIDTH
 
+    # Con la animación corriendo, la pestaña se corre hacia la izquierda.
+    tab = window._panel_tab_rect()
     _click(window, tab.center().x(), tab.center().y())
     assert window._panel_open is False
     assert window._panel_anim.endValue() == 0
@@ -157,7 +162,7 @@ def test_panel_sections_are_ordered(app: QApplication):
     assert titles == [
         "REGLAS",
         "DIBUJO",
-        "LISTO PARA VER",
+        "MODO PELÍCULA",
         "OPCIONES",
         "♥ Apoya nuestra app",
     ]
@@ -192,18 +197,29 @@ def test_one_button_groups_take_the_full_width(app: QApplication):
     rects = {name: rect for name, rect in window._panel_buttons()}
     assert rects["clear_rules"].width() == ow.PANEL_BUTTON_W1 == ow.PANEL_BUTTONS_W
 
-def test_manual_is_a_modal_dialog_with_the_expected_rows(app: QApplication):
+def test_manual_is_non_modal_and_has_the_expected_rows(app: QApplication):
+    from PySide6.QtCore import Qt
+
     from src.ui import manual
 
     assert manual.TITLE == "—MANUAL DE USO—"
     assert manual.COLUMNS == ("Funcion", "Comando")
+    dialog = manual.ManualDialog()
+    try:
+        assert dialog.windowModality() == Qt.WindowModality.NonModal
+        assert (
+            dialog.testAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        ), "el manual no debe robarle el foco al overlay"
+    finally:
+        dialog.close()
     filas = dict(manual.ROWS)
-    assert filas["Seleccionar regla anterior"] == "Flecha izquierda"
-    assert filas["Cambiar el color de la regla"] == "Shift + C"
-    assert filas["Cerrar Aleph"] == "ESC - Escape"
-    assert filas["Abrir y Cerrar panel de opciones"] == "TAB - Tabulador"
-    assert filas["Alternar a modo visualizacion"] == "Shift + M"
+    assert filas["Abrir / cerrar panel de opciones"] == "TAB"
+    assert filas["Abrir / cerrar este manual"] == "F1"
+    assert filas["Sacar captura de pantalla"] == "Shift + S / PrtScn"
+    assert filas["Modo película (ocultar botonera)"] == "Shift + M"
+    assert filas["Cerrar Aleph (o panel si está abierto)"] == "ESC"
     assert filas["Borrar mis reglas dibujadas"] == "Shift + D"
+    assert filas["Dibujar varias reglas seguidas"] == "Mantén Shift al colocar"
 
 def test_manual_fonts_and_colors_match_the_panel_style(app: QApplication):
     from PySide6.QtGui import QFont
@@ -259,15 +275,15 @@ def test_group_labels_and_button_texts(app: QApplication):
     assert textos["clear_rules"] == "Borrar mis lineas dibujadas"
     assert textos["capture"] == "Capturar"
     assert textos["capture_dir"] == "Guardar en"
-    assert textos["toggle_frame"] == "Modo visualización"
+    assert textos["toggle_frame"] == "Ocultar botonera"
     assert textos["manual"] == "Manual de uso"
     assert textos["donate_link"] == "Link"
     assert textos["donate_cvu"] == "CVU"
     assert textos["donate_alias"] == "ALIAS"
-    assert textos["rule_rect_si"] == "┘ Superior izquierdo"
-    assert textos["rule_rect_sd"] == "└ Superior derecho"
-    assert textos["rule_rect_ii"] == "┐ Inferior izquierdo"
-    assert textos["rule_rect_id"] == "┌ Inferior derecho"
+    assert textos["rule_rect_si"] == "Rectángulo ↖"
+    assert textos["rule_rect_sd"] == "Rectángulo ↗"
+    assert textos["rule_rect_ii"] == "Rectángulo ↙"
+    assert textos["rule_rect_id"] == "Rectángulo ↘"
 
 def test_button_text_takes_the_biggest_size_that_fits(app: QApplication):
     window = _window(State())

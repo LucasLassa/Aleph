@@ -35,6 +35,7 @@ class State:
     rules: list[Rule] = field(default_factory=list)
     capture_dir: str = ""
     pending_capture: bool = False
+    seen_manual: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in asdict(self).items() if k not in NO_PERSIST}

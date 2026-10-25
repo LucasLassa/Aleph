@@ -47,6 +47,7 @@ ACTIONS: dict[str, Callable[[State], None]] = {
     "capture": _capture,
     "quit": lambda s: None,
     "toggle_panel": lambda s: None,
+    "manual": lambda s: None,
 }
 
 KEYMAP: dict[str, str] = {
@@ -60,6 +61,8 @@ KEYMAP: dict[str, str] = {
     "Shift+C": "toggle_line_color",
     "Esc": "quit",
     "Tab": "toggle_panel",
+    "Print": "capture",
+    "F1": "manual",
 }
 
 

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import datetime
+import re
+import unicodedata
 from pathlib import Path
 
 from PySide6.QtCore import QStandardPaths
@@ -10,8 +12,6 @@ from PySide6.QtGui import QColor, QImage, QPainter
 from src.core import guides, rules
 from src.core.state import State
 from src.platform.capture import ScreenGrabber
-
-FILENAME_FORMAT = "aleph-%Y%m%d-%H%M%S.png"
 
 
 def default_capture_dir() -> Path:
@@ -23,9 +23,22 @@ def capture_dir(state: State) -> Path:
         return Path(state.capture_dir)
     return default_capture_dir()
 
-def capture_filename(moment: datetime.datetime | None = None) -> str:
+def _slug_guide(state: State) -> str:
+    if 0 <= state.guide_index < len(guides.POOL):
+        name = guides.POOL[state.guide_index]
+    else:
+        name = "vacio"
+    name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
+    name = re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
+    return name or "vacio"
+
+def capture_filename(
+    state: State,
+    moment: datetime.datetime | None = None,
+    counter: int = 1,
+) -> str:
     moment = moment or datetime.datetime.now()
-    return moment.strftime(FILENAME_FORMAT)
+    return f"aleph_{_slug_guide(state)}_{moment.strftime('%Y-%m-%d_%H-%M-%S')}_{counter:03d}.png"
 
 def overlay_on_image(
     image: QImage, state: State, color: QColor | None = None
@@ -54,7 +67,11 @@ def capture_with_guides(
         target_dir.mkdir(parents=True, exist_ok=True)
     except OSError:
         return None, None
-    path = target_dir / capture_filename()
+    moment = datetime.datetime.now()
+    # Contador por día y guía: dos capturas en segundos distintos avanzan.
+    day_prefix = f"aleph_{_slug_guide(state)}_{moment.strftime('%Y-%m-%d')}_"
+    counter = len(list(target_dir.glob(f"{day_prefix}*.png"))) + 1
+    path = target_dir / capture_filename(state, moment, counter)
     if not image.save(str(path), "PNG"):
         return None, None
     return image, path

@@ -27,10 +27,13 @@ class FakeGrabber(ScreenGrabber):
         img.fill(self.color)
         return img
 
-def test_capture_filename_has_timestamp():
-    moment = datetime.datetime(2026, 10, 20, 14, 30, 12)
-    name = capture_core.capture_filename(moment)
-    assert name == "aleph-20261020-143012.png"
+def test_capture_filename_has_guide_slug_and_counter():
+    from src.core import guides
+
+    moment = datetime.datetime(2026, 10, 24, 15, 30, 12)
+    state = State(guide_index=guides.POOL.index("Regla de tercios"))
+    name = capture_core.capture_filename(state, moment)
+    assert name == "aleph_regla_de_tercios_2026-10-24_15-30-12_001.png"
     assert name.endswith(".png")
 
 def test_capture_dir_defaults_to_downloads():
@@ -56,6 +59,21 @@ def test_capture_saves_file_with_guides(tmp_path):
     assert path.suffix == ".png"
     assert image is not None
     assert grabber.calls == 1
+
+def test_counter_advances_for_same_day_regardless_of_second(tmp_path):
+    day = datetime.datetime.now().strftime("%Y-%m-%d")
+    state = State(
+        capture_dir=str(tmp_path),
+        guide_index=guides.POOL.index("Regla de tercios"),
+    )
+    (tmp_path / f"aleph_regla_de_tercios_{day}_09-00-01_001.png").write_bytes(b"")
+    (tmp_path / f"aleph_regla_de_tercios_{day}_09-00-02_002.png").write_bytes(b"")
+    (tmp_path / "aleph_regla_de_tercios_2020-01-01_09-00-01_009.png").write_bytes(b"")
+    (tmp_path / "aleph_centro_2020-01-01_09-00-01_009.png").write_bytes(b"")
+
+    image, path = capture_core.capture_with_guides(FakeGrabber(), state)
+    assert path is not None, "las capturas del mismo día suman contador"
+    assert path.name.endswith("_003.png"), "otros días/guías no cuentan"
 
 def test_capture_has_guide_lines_over_the_photo(tmp_path):
     state = State(capture_dir=str(tmp_path), guide_index=guides.POOL.index("Regla de tercios"))

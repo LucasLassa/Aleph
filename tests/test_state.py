@@ -30,6 +30,14 @@ def test_from_dict_ignores_legacy_guide_index():
 def test_defaults_cover_state_fields():
     assert set(State().to_dict()) <= set(DEFAULTS)
 
+def test_seen_manual_is_persisted():
+    s = State(seen_manual=True)
+    d = s.to_dict()
+    assert d["seen_manual"] is True
+    assert State.from_dict(d).seen_manual is True
+    assert State.from_dict({}).seen_manual is False
+
+
 def test_line_dark_is_persisted():
     s = State(line_dark=True, opacity=0.4)
     d = s.to_dict()
