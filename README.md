@@ -4,7 +4,7 @@ Superposición transparente de guías de composición en la pantalla. Útil
 para el análisis y estudio de la fotografía cinematográfica viendo
 películas, series y anime.
 
-![Captura de la app](docs/screenshot.png)
+![Captura de la app](docs/Aleph-Panel.png)
 
 ## CARACTERÍSTICAS
 
