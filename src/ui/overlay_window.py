@@ -756,11 +756,17 @@ class OverlayWindow(QWidget):
 
     def _do_capture(self) -> None:
         grabber = capture_platform.make_grabber(self.platform.get_screen_geometry())
+        manual_was_visible = self._manual is not None and self._manual.isVisible()
+        if manual_was_visible:
+            self._manual.hide()
+        QToolTip.hideText()
         try:
             self.hide()
             image, path = capture_with_guides(grabber, self.state)
         finally:
             self.show()
+            if manual_was_visible:
+                self._manual.show()
             if self.state.fullscreen:
                 self.showFullScreen()
             self._chrome_hidden = False

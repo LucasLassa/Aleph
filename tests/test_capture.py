@@ -67,13 +67,16 @@ def test_counter_advances_for_same_day_regardless_of_second(tmp_path):
         guide_index=guides.POOL.index("Regla de tercios"),
     )
     (tmp_path / f"aleph_regla_de_tercios_{day}_09-00-01_001.png").write_bytes(b"")
-    (tmp_path / f"aleph_regla_de_tercios_{day}_09-00-02_002.png").write_bytes(b"")
+    (tmp_path / f"aleph_regla_de_tercios_{day}_09-00-03_003.png").write_bytes(b"")
     (tmp_path / "aleph_regla_de_tercios_2020-01-01_09-00-01_009.png").write_bytes(b"")
     (tmp_path / "aleph_centro_2020-01-01_09-00-01_009.png").write_bytes(b"")
+    (tmp_path / f"aleph_regla_de_tercios_{day}_09-00-02_no-numero.png").write_bytes(b"")
 
     image, path = capture_core.capture_with_guides(FakeGrabber(), state)
     assert path is not None, "las capturas del mismo día suman contador"
-    assert path.name.endswith("_003.png"), "otros días/guías no cuentan"
+    assert path.name.endswith("_004.png"), "máximo existente + 1, sin reusar huecos"
+    assert (tmp_path / f"aleph_regla_de_tercios_{day}_09-00-03_003.png").exists(), \
+        "nunca sobrescribe"
 
 def test_capture_has_guide_lines_over_the_photo(tmp_path):
     state = State(capture_dir=str(tmp_path), guide_index=guides.POOL.index("Regla de tercios"))

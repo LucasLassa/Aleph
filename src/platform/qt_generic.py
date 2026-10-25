@@ -27,7 +27,7 @@ class QtGenericPlatform(Platform):
         if sys.platform == "win32":
             self._win_set_click_through(enabled)
         else:
-            # ponytail: X11/macOS quedan con el flag global de Qt (botón no
+            # ponytail: X11 queda con el flag global de Qt (botón no
             # clicable en modo visualización); el mismo poll de QCursor.pos
             # serviría si algún día hay que arreglarlos.
             self.window.setWindowFlag(
@@ -50,8 +50,21 @@ class QtGenericPlatform(Platform):
     def _apply_win_transparent(self, on: bool) -> bool:
         if self.window is None:
             return False
+        from ctypes import wintypes
+
         user32 = ctypes.windll.user32
-        hwnd = int(self.window.winId())
+
+        # Prevenir truncamiento de punteros en sistemas de 64 bits.
+        user32.GetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int]
+        user32.GetWindowLongPtrW.restype = ctypes.c_ssize_t
+        user32.SetWindowLongPtrW.argtypes = [
+            wintypes.HWND,
+            ctypes.c_int,
+            ctypes.c_ssize_t,
+        ]
+        user32.SetWindowLongPtrW.restype = ctypes.c_ssize_t
+
+        hwnd = wintypes.HWND(int(self.window.winId()))
         style = user32.GetWindowLongPtrW(hwnd, GWL_EXSTYLE)
         if bool(style & WS_EX_TRANSPARENT) == on:
             return False

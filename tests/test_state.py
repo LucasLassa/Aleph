@@ -14,6 +14,27 @@ def test_from_dict_ignores_unknown_keys():
     s = State.from_dict({"opacity": 0.5, "clave_inventada": 123})
     assert s.opacity == 0.5
 
+def test_from_dict_rejects_corrupt_types():
+    s = State.from_dict(
+        {
+            "opacity": "borrame_el_disco",
+            "line_dark": "si",
+            "seen_manual": 1,
+            "monitor": False,
+            "capture_dir": ["no", "es", "string"],
+            "opacity_ok": None,
+        }
+    )
+    d = State()
+    assert s.opacity == d.opacity, "tipo corrupto → default"
+    assert s.line_dark == d.line_dark
+    assert s.seen_manual == d.seen_manual
+    assert s.monitor == d.monitor
+    assert s.capture_dir == d.capture_dir
+
+def test_from_dict_accepts_int_opacity():
+    assert State.from_dict({"opacity": 1}).opacity == 1
+
 def test_guide_index_not_persisted():
     s = State(guide_index=5, opacity=0.4)
     d = s.to_dict()

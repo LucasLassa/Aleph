@@ -50,6 +50,7 @@ _IID_PERSIST_FILE = "{0000010B-0000-0000-C000-000000000046}"
 _VT_SET_DESCRIPTION = 7
 _VT_SET_ICON_LOCATION = 17
 _VT_SET_PATH = 20
+_VT_SET_ARGUMENTS = 11
 _VT_SAVE = 3
 
 
@@ -119,6 +120,18 @@ def _create_windows_shortcut(link: Path, target: str, icon: str, description: st
     set_icon(shell_link, icon, 0)
     set_desc(shell_link, description)
 
+    if getattr(sys, "frozen", False):
+        args = ""
+    else:
+        parts = _exec_line().split('"', 2)
+        args = parts[2].strip() if len(parts) >= 3 else ""
+
+    if args:
+        set_args = ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, ctypes.c_wchar_p)(
+            _vtable(shell_link.value, _VT_SET_ARGUMENTS)
+        )
+        set_args(shell_link, args)
+
     query_interface = ctypes.WINFUNCTYPE(
         ctypes.c_long, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p
     )(_vtable(shell_link.value, 0))
@@ -151,7 +164,11 @@ def _windows_icon_file() -> str:
 def _install_windows_desktop() -> None:
     link = _windows_desktop_dir() / f"{DESKTOP_ID}.lnk"
     frozen = getattr(sys, "frozen", False)
-    target = sys.executable if frozen else _exec_line().strip('"')
+    if frozen:
+        target = sys.executable
+    else:
+        parts = _exec_line().split('"', 2)
+        target = parts[1] if len(parts) >= 2 else sys.executable
     icon = f"{sys.executable},0" if frozen else _windows_icon_file()
     _create_windows_shortcut(link, target, icon, "Guías de composición sobre cualquier video")
     log.info("acceso directo de escritorio creado: %s", link)
@@ -175,12 +192,15 @@ def _install_linux_icon() -> Path:
     src = icons.icon_path()
     if src.exists() and (not dest.exists() or dest.read_bytes() != src.read_bytes()):
         shutil.copyfile(src, dest)
-        subprocess.run(
-            ["gtk-update-icon-cache", "-f", "-t", str(data_home / "icons" / "hicolor")],
-            capture_output=True,
-            timeout=30,
-            check=False,
-        )
+        try:
+            subprocess.run(
+                ["gtk-update-icon-cache", "-f", "-t", str(data_home / "icons" / "hicolor")],
+                capture_output=True,
+                timeout=30,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass  # herramienta opcional: el acceso directo ya está creado
         log.info("ícono instalado en el theme: %s", dest)
     return dest
 

@@ -43,5 +43,15 @@ class State:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> State:
         known = {f for f in cls.__dataclass_fields__} - set(NO_PERSIST)
-        clean = {k: v for k, v in data.items() if k in known}
+        clean: dict[str, Any] = {}
+        for k, v in data.items():
+            if k not in known:
+                continue
+            if k == "opacity" and not isinstance(v, (int, float)):
+                continue
+            if k in ("line_dark", "seen_manual") and not isinstance(v, bool):
+                continue
+            if k in ("monitor", "capture_dir") and not isinstance(v, str):
+                continue
+            clean[k] = v
         return cls(**clean)

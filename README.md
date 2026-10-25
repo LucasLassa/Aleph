@@ -65,10 +65,8 @@ repositorio:
 
 - Linux x86_64
 - Windows x86_64
-- macOS arm64
 
 En Linux, dale permisos de ejecución con `chmod +x`.
-En macOS sin firmar, hacé clic derecho → Abrir (Gatekeeper).
 En Windows, "Ejecutar de todas formas" (SmartScreen).
 
 ### Desde el código
@@ -203,7 +201,6 @@ Para generar los binarios:
 pip install -e .[dev]
 pyinstaller aleph.spec
 # Linux/Windows: dist/aleph(.exe)    [onefile]
-# macOS:         dist/aleph.app       [onedir + bundle]
 ```
 
 Estructura:

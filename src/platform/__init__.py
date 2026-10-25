@@ -13,7 +13,7 @@ log = get_logger(__name__)
 
 
 def get_platform(window=None) -> Platform:
-    if sys.platform in ("win32", "darwin"):
+    if sys.platform == "win32":
         platform: Platform = QtGenericPlatform(window)
     elif sys.platform == "linux" and (
         os.environ.get("XDG_SESSION_TYPE") == "wayland" or os.environ.get("WAYLAND_DISPLAY")

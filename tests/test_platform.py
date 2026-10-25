@@ -19,10 +19,6 @@ def test_windows_uses_qt_generic(monkeypatch):
     monkeypatch.setattr("sys.platform", "win32")
     assert isinstance(get_platform(None), QtGenericPlatform)
 
-def test_macos_uses_qt_generic(monkeypatch):
-    monkeypatch.setattr("sys.platform", "darwin")
-    assert isinstance(get_platform(None), QtGenericPlatform)
-
 def test_linux_wayland_uses_linux_wayland(monkeypatch):
     monkeypatch.setattr("sys.platform", "linux")
     monkeypatch.setenv("XDG_SESSION_TYPE", "wayland")
