@@ -132,7 +132,7 @@ organizado en secciones:
 - **Listo para ver**: modo visualización (pasivo) y borrar las líneas
   propias.
 - **Opciones**: captura de pantalla, carpeta de guardado y manual de uso.
-- **Apoya nuestra app**: link de donación, CVU y alias (al portapapeles).
+- **Apoya nuestra app**: link de donación, CVU y alias (para copiar y pegar).
 
 ### Modo pasivo
 
