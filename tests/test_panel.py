@@ -46,7 +46,13 @@ def _click(window: OverlayWindow, x: float, y: float) -> None:
     )
     window.mousePressEvent(event)
     # Los botones del panel ejecutan su acción tras el flash de 80 ms.
-    QTest.qWait(110)
+    # Esperamos a que el flash termine (_pressed_button se limpia al
+    # ejecutar) en vez de contar milisegundos: en Windows la granularidad
+    # del timer del sistema (~15.6 ms) hace que un qWait fijo sea un race.
+    for _ in range(100):
+        if window._pressed_button is None:
+            break
+        QTest.qWait(10)
 
 def test_panel_is_closed_by_default(app: QApplication):
     window = _window(State())
