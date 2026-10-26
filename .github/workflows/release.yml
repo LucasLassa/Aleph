@@ -70,9 +70,6 @@ jobs:
             artifact: aleph-linux-x86_64
           - os: windows-latest
             artifact: aleph-windows-x86_64.exe
-          - os: macos-latest
-            # El .app de macOS es un directorio: se sube comprimido en zip.
-            artifact: aleph-macos-arm64.zip
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -93,10 +90,6 @@ jobs:
         run: |
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             cp dist/aleph.exe "${{ matrix.artifact }}"
-          elif [[ "${{ runner.os }}" == "macOS" ]]; then
-            # .app es un directorio: ditto lo empaqueta respetando recursos.
-            ditto -c -k --sequesterRsrc --keepParent \
-              dist/aleph.app "${{ matrix.artifact }}"
           else
             cp dist/aleph "${{ matrix.artifact }}"
           fi
@@ -117,7 +110,7 @@ jobs:
         with:
           path: release-assets
           merge-multiple: true
-      - name: Crear Release con los 3 binarios
+      - name: Crear Release con los 2 binarios (Linux y Windows)
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${GITHUB_REF_NAME}" --generate-notes --verify-tag release-assets/*
