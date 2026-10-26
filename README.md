@@ -1,35 +1,23 @@
 # ALEPH
 
-Superposición transparente de guías de composición en la pantalla. Útil
-para el análisis y estudio de la fotografía cinematográfica viendo
-películas, series y anime.
+**Reglas de composicion fotograficas transparentes para superponer en pantalla.
+Útil para guiarte en tus animaciones y para estudiar la composición fotográfica de series, peliculas, fotografia y obras de arte.**
 
 ![Captura de la app](docs/Aleph-Panel.png)
 
-## CARACTERÍSTICAS
+## Caracteristicas
 
-- Pool con 11 guías preestablecidas: regla de tercios, triángulos áureos,
-  espirales de Fibonacci, centro, diagonales y rejilla áurea (Phi Grid).
-  Incluye un espacio vacío para trabajar solo con las reglas propias.
+- **11 guías preestablecidas**: regla de tercios, triángulos áureos,
+  espirales de Fibonacci, centro, diagonales y rejilla áurea.
+  Incluye un **espacio vacío** para trabajar solo con tus reglas.
 
-- Definición de reglas personalizadas por el usuario.
+- **Modo pasivo**: la ventana deja de capturar el ratón y los clics pasan al contenido de abajo.
 
-- Modo pasivo (click-through): la ventana deja de capturar el ratón y
-  los clics pasan al contenido de abajo.
+- **Captura de pantalla con las guías y reglas superpuestas.**
 
-- Ventana redimensionable, para ajustar los marcos a diferentes
-  resoluciones.
+## Galeria
 
-- Captura de pantalla limpia con las guías y reglas superpuestas.
-
-- Acceso directo en el Escritorio y registro en el menú de aplicaciones
-  en la primera ejecución.
-
-## GALERÍA
-
-Las guías de Aleph sobre una película, en modo pasivo: la overlay no
-intercepta el ratón ni las teclas, así que la película sigue siendo lo
-que estás mirando.
+Muestra de las guías de Aleph sobre **The Godfather**, en modo pasivo:
 
 <table>
   <tr>
@@ -56,27 +44,22 @@ que estás mirando.
 
 ## INSTALACIÓN
 
-### Binarios (sin Python)
+Descargá el binario de tu sistema desde la pestaña [Releases](https://github.com/LucasLassa/aleph/releases) del
+repositorio, o desde este link <https://github.com/LucasLassa/aleph/releases>
 
-Descargá el binario de tu sistema desde la pestaña Releases del
-repositorio:
+- **Linux x86_64**
+- **Windows x86_64**
 
-<https://github.com/LucasLassa/aleph/releases>
-
-- Linux x86_64
-- Windows x86_64
-
-En Linux, dale permisos de ejecución con `chmod +x`.
-En Windows, "Ejecutar de todas formas" (SmartScreen).
+En **Linux**, dale permisos de ejecución con `chmod +x`.
+En **Window**s, **"Ejecutar de todas formas"** (SmartScreen).
 
 ### Desde el código
-
 Requisitos:
 
-- Python ≥ 3.11
-- PySide6 ≥ 6.5
+- **Python ≥ 3.11**
+- **PySide6 ≥ 6.5**
 
-Instalación recomendada (venv):
+Instalación recomendada:
 
 ```bash
 python -m venv .venv
@@ -98,7 +81,7 @@ También podés correrlo sin instalar:
 python -m src.main
 ```
 
-## USO RÁPIDO
+## Uso rápido
 
 La ventana se abre a pantalla completa, adaptada al monitor, con el
 marco activo.
@@ -132,7 +115,6 @@ organizado en secciones:
 - **Modo película**: ocultar la botonera y borrar las líneas
   propias.
 - **Opciones**: captura de pantalla, carpeta de guardado y manual de uso.
-- **Apoya nuestra app**: link de donación, CVU y alias (para copiar y pegar).
 
 ### Modo pasivo
 
@@ -145,19 +127,18 @@ Los atajos con Shift siguen funcionando con el marco OFF. El teclado
 también responde sin botones visibles: `←` `→`, `↑` `↓`, `Shift + M`,
 `Shift + C` y `Esc`.
 
-## REGLAS PROPIAS
+## Tus reglas
 
-Además de las guías preestablecidas, podés crear líneas de composición a
+Además de las guías preestablecidas, **podés crear líneas de composición** a
 medida. Los botones del panel se agrupan en rectas (horizontal y
 vertical), diagonales (ascendente y descendente), vértices (cuatro
 esquinas) y el punto de fuga.
 
 ### Cómo se colocan
 
-1. Pulsá el botón del tipo de regla que quieras: el botón queda armado
+1. Pulsá el botón de la regla que quieras: el botón queda armado
    (iluminado) y el cursor se vuelve cruz.
-2. Hacé click en el lienzo donde querés el vértice: la regla se coloca
-   y el botón se desarma.
+2. Hacé click en el lienzo donde querés el vértice: la regla se coloca.
 3. Mantené `Shift` al colocar para dibujar varias seguidas; con un
    arrastre movés la regla que acabás de colocar.
 
@@ -166,21 +147,15 @@ esquinas) y el punto de fuga.
 `Shift + D` (o el botón "Borrar mis líneas dibujadas" del panel)
 borra todas las reglas propias.
 
-### Espacio vacío
-
-La guía "Espacio vacío" no dibuja ninguna línea preestablecida: queda
-el lienzo limpio. Es útil para usar solo tus reglas.
-
-## CAPTURAS DE PANTALLA
+## Capturas de pantalla
 
 `Shift + S`, `PrtScn` (o el botón "Capturar") guarda una foto con la guía
-activa y las reglas superpuestas, casi sin demora.
-
-- Se guarda en Descargas, o en la carpeta elegida con "Guardar en".
+activa y las reglas superpuestas.
+- Se guarda en Descargas, o en la carpeta elegida con **"Guardar en"**.
 - Nombres: `aleph_regla_de_tercios_2026-10-24_15-30-12_001.png`
   (guía, fecha-hora y contador).
 
-## CONFIGURACIÓN
+## Configuracion
 
 La configuración se guarda en
 `~/.config/aleph/config.json` al cerrar la app: opacidad,
