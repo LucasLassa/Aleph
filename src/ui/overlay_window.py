@@ -32,6 +32,7 @@ from PySide6.QtGui import (
     QPainter,
     QPaintEvent,
     QPen,
+    QWheelEvent,
 )
 from PySide6.QtWidgets import QApplication, QFileDialog, QToolTip, QWidget
 
@@ -131,6 +132,19 @@ PANEL_ROWS: list[tuple[str | None, list[tuple[str, str]]]] = [
     ),
     (
         None,
+        [("toggle_window_mode", "Modificar tamaño"), ("rotate_ratio", "Rotar (H/V) ↻")],
+    ),
+    (
+        None,
+        [
+            ("res_16_9", "16:9"),
+            ("res_4_3", "4:3"),
+            ("res_21_9", "2.39:1"),
+            ("res_1_1", "1:1"),
+        ],
+    ),
+    (
+        None,
         [("capture", "Capturar"), ("capture_dir", "Guardar en")],
     ),
     (
@@ -147,8 +161,9 @@ PANEL_SECTIONS: list[tuple[str | None, list[tuple[str | None, list[tuple[str, st
     ("REGLAS", PANEL_ROWS[0:3]),
     ("DIBUJO", PANEL_ROWS[3:8]),
     ("MODO PELÍCULA", PANEL_ROWS[8:10]),
-    ("OPCIONES", PANEL_ROWS[10:12]),
-    ("♥ Apoya nuestra app", PANEL_ROWS[12:13]),
+    ("FORMATO Y RESOLUCIÓN", PANEL_ROWS[10:12]),
+    ("OPCIONES", PANEL_ROWS[12:14]),
+    ("♥ Apoya nuestra app", PANEL_ROWS[14:15]),
 ]
 
 RULE_KINDS: dict[str, tuple[str, int]] = {
@@ -182,6 +197,12 @@ TOOLTIPS: dict[str, str] = {
     "capture_dir": "Elegir carpeta de capturas",
     "toggle_frame": "Ocultar la botonera (Shift+M)",
     "clear_rules": "Borrar todas mis reglas (Shift+D)",
+    "toggle_window_mode": "Modificar tamaño / alternar pantalla completa",
+    "rotate_ratio": "Rotar la orientación (horizontal ↔ vertical)",
+    "res_16_9": "Ajustar ventana a formato panorámico 16:9",
+    "res_4_3": "Ajustar ventana a formato clásico 4:3",
+    "res_21_9": "Ajustar ventana a formato cine / anamórfico 2.39:1",
+    "res_1_1": "Ajustar ventana a formato cuadrado 1:1",
     "manual": "Abrir el manual (F1)",
     "donate_link": "Abrir la página de donación",
     "donate_cvu": "Copiar el CVU al portapapeles",
@@ -216,7 +237,8 @@ PANEL_FONT_FAMILIES = (
 )
 ORANGE_KID_FILENAME = "Orange Kid.otf"
 
-RESIZE_HANDLE = 18
+RESIZE_HANDLE = 22
+FRAME_BORDER_GRAB_PX = 8
 
 FRAME_ON_BUTTON_W = 190
 FRAME_ON_BUTTON_H = 28
@@ -265,6 +287,15 @@ class OverlayWindow(QWidget):
         self._placing_rule: Rule | None = None
         self._resizing: int | None = None
         self._resize_origin: QRect | None = None
+        self._resize_start_global: QPoint | None = None
+        self._shift_resizing = False
+        self._shift_resize_origin = QRect()
+        self._shift_resize_start = QPoint()
+        self._hovered_handle: int | None = None
+        self._moving_window = False
+        self._move_origin: QPoint | None = None
+        self._move_start_global: QPoint | None = None
+        self._panel_scroll_y = 0
         self._capture_timer = QTimer(self)
         self._capture_timer.setSingleShot(True)
         self._capture_timer.timeout.connect(self._do_capture)
@@ -1025,6 +1056,13 @@ class OverlayWindow(QWidget):
                 self._placing_rule = diagonal
                 self._update_rule_placement(pos)
                 return
+        # Shift + click+drag sobre zona libre en marco: redimensionar desde el centro.
+        if shift and not self.state.fullscreen:
+            self._shift_resizing = True
+            self._shift_resize_origin = QRect(self.geometry())
+            self._shift_resize_start = pos
+            self.setCursor(QCursor(Qt.CursorShape.SizeAllCursor))
+            return
         super().mousePressEvent(event)
 
     def _update_opacity_from_pos(self, pos: QPoint) -> None:
@@ -1071,6 +1109,20 @@ class OverlayWindow(QWidget):
         if self._dragging_opacity:
             self._update_opacity_from_pos(pos)
             return
+        if self._shift_resizing:
+            dx = pos.x() - self._shift_resize_start.x()
+            dy = pos.y() - self._shift_resize_start.y()
+            origin = self._shift_resize_origin
+            w = max(120, origin.width() + dx)
+            h = max(80, origin.height() + dy)
+            self.setGeometry(
+                origin.x() + (origin.width() - w) // 2,
+                origin.y() + (origin.height() - h) // 2,
+                w,
+                h,
+            )
+            self.update()
+            return
         if self._resizing is not None:
             self._update_resize(pos)
             return
@@ -1096,6 +1148,12 @@ class OverlayWindow(QWidget):
             # Terminó el gesto de colocación; el botón sigue armado si
             # se usó Shift (varias seguidas).
             self._finish_rule_placement()
+            return
+        if self._shift_resizing:
+            self._shift_resizing = False
+            self._shift_resize_origin = QRect()
+            self._shift_resize_start = QPoint()
+            self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
             return
         if self._resizing is not None:
             self._end_resize()
@@ -1158,6 +1216,10 @@ class OverlayWindow(QWidget):
     def keyReleaseEvent(self, event: QKeyEvent) -> None:
         if event.key() == Qt.Key.Key_Shift:
             self._finish_rule_placement()
+            self._shift_resizing = False
+            self._shift_resize_origin = QRect()
+            self._shift_resize_start = QPoint()
+            self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
         super().keyReleaseEvent(event)
 
     def _get_panel_offset(self) -> float:
