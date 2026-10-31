@@ -32,7 +32,6 @@ from PySide6.QtGui import (
     QPainter,
     QPaintEvent,
     QPen,
-    QWheelEvent,
 )
 from PySide6.QtWidgets import QApplication, QFileDialog, QToolTip, QWidget
 
