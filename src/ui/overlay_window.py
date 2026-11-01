@@ -833,11 +833,52 @@ class OverlayWindow(QWidget):
             sg = screen.geometry() if screen else None
             sw = sg.width() if sg else 1920
             sh = sg.height() if sg else 1080
-            sx = sg.x() if sg else 0
-            sy = sg.y() if sg else 0
-            w, h = int(sw * 0.8), int(sh * 0.8)
-            self.showNormal()
-            self.setGeometry(sx + (sw - w) // 2, sy + (sh - h) // 2, w, h)
+        sx = sg.x() if sg else 0
+        sy = sg.y() if sg else 0
+        w, h = int(sw * 0.8), int(sh * 0.8)
+        self.showNormal()
+        self.setGeometry(sx + (sw - w) // 2, sy + (sh - h) // 2, w, h)
+        self.state.fullscreen = False
+        self.update()
+
+    def _apply_ratio(self, ratio_str: str) -> None:
+        try:
+            w_str, h_str = ratio_str.split(":")
+            w_ratio = float(w_str)
+            h_ratio = float(h_str)
+        except (ValueError, ZeroDivisionError):
+            return
+        if w_ratio <= 0 or h_ratio <= 0:
+            return
+        g = self.geometry()
+        new_h = round(g.width() * h_ratio / w_ratio)
+        cx = g.center().x()
+        cy = g.center().y()
+        new_w = g.width()
+        self.setGeometry(
+            cx - new_w // 2,
+            cy - new_h // 2,
+            new_w,
+            max(80, new_h),
+        )
+        self.state.active_ratio = ratio_str
+        self.state.aspect_rotated = False
+        self.update()
+
+    def _rotate_ratio(self) -> None:
+        g = self.geometry()
+        cx = g.center().x()
+        cy = g.center().y()
+        new_w = max(120, g.height())
+        new_h = max(80, g.width())
+        self.setGeometry(
+            cx - new_w // 2,
+            cy - new_h // 2,
+            new_w,
+            new_h,
+        )
+        self.state.aspect_rotated = not self.state.aspect_rotated
+        self.state.active_ratio = None
         self.update()
 
     def apply_frame_mode(self) -> None:
@@ -898,6 +939,20 @@ class OverlayWindow(QWidget):
             self.state.frame_mode = not self.state.frame_mode
             self.state.click_through = not self.state.frame_mode
             self.apply_frame_mode()
+        elif name == "toggle_window_mode":
+            self.toggle_fullscreen()
+        elif name == "rotate_ratio":
+            self._rotate_ratio()
+            self._show_label("Orientación rotada")
+        elif name in ("res_16_9", "res_4_3", "res_21_9", "res_1_1"):
+            ratios = {
+                "res_16_9": "16:9",
+                "res_4_3": "4:3",
+                "res_21_9": "2.39:1",
+                "res_1_1": "1:1",
+            }
+            self._apply_ratio(ratios[name])
+            self._show_label(f"Formato {ratios[name]}")
         elif name == "manual":
             self.show_manual()
         elif name == "donate_link":
