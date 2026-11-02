@@ -3,7 +3,7 @@
 **Reglas de composicion fotograficas transparentes para superponer en pantalla.
 Útil para guiarte en tus animaciones y para estudiar la composición fotográfica de series, peliculas, fotografia y obras de arte.**
 
-![Captura de la app](docs/Aleph-Panel.png)
+![Captura de la app](docs/Aleph_PanelDeMuestra.png)
 
 ## Caracteristicas
 
